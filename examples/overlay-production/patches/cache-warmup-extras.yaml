@@ -1,0 +1,28 @@
+# Project-specific cache-warmup additions: bundle-provided commands that
+# don't ship with stock Symfony (UX Icons, PrestaSitemapBundle, etc.).
+#
+# Note the explicit listing of all four init container names. Without this
+# pin, kustomize's strategic-merge reorders the patched item to position 0,
+# which breaks startup (wait-for-postgres must run first).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+        - name: copy-public-files
+        - name: run-migrations
+        - name: cache-warmup
+          command:
+            - sh
+            - -c
+            - |
+              php bin/console cache:clear --no-warmup
+              php bin/console cache:warmup
+              php bin/console importmap:install 2>/dev/null || true
+              php bin/console ux:icons:warm-cache
+              mkdir -p /app/storage/sitemaps
+              php bin/console presta:sitemaps:dump /app/storage/sitemaps

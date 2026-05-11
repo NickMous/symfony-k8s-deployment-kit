@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - postgres.yaml
+
+# The base deployment already includes a `wait-for-postgres` init container
+# that no-ops when POSTGRES_HOST is unset. Enabling this component makes that
+# wait active via the overlay's replacements + this component's postgres
+# Service + Secret.

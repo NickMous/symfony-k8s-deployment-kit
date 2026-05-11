@@ -1,0 +1,127 @@
+name: Build nginx Image
+
+# Builds the shared Symfony-friendly nginx image (nginx + ngx_brotli) and
+# publishes it as a multi-arch image. All projects consuming this template
+# reference the resulting image — they don't build their own.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docker/nginx/**
+      - .github/workflows/build-nginx.yaml
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Prepare Docker image name
+        id: docker
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          IMAGE_NAME=$(echo "$REPO" | tr '[:upper:]' '[:lower:]')
+          echo "image_name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.docker.outputs.image_name }}
+          tags: |
+            type=raw,value=nginx-sha-${{ github.sha }}-${{ matrix.arch }}
+
+      - name: Build and push ${{ matrix.platform }} image
+        uses: docker/build-push-action@v7
+        with:
+          context: docker/nginx
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ steps.docker.outputs.image_name }}:nginx-buildcache-${{ matrix.arch }}
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ steps.docker.outputs.image_name }}:nginx-buildcache-${{ matrix.arch }},mode=max
+
+  manifest:
+    name: Create Multi-arch Manifest
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Prepare Docker image name
+        id: docker
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          IMAGE_NAME=$(echo "$REPO" | tr '[:upper:]' '[:lower:]')
+          echo "image_name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifest
+        env:
+          IMAGE_BASE: ${{ env.REGISTRY }}/${{ steps.docker.outputs.image_name }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          SHA_TAG="nginx-sha-${COMMIT_SHA}"
+
+          docker buildx imagetools create -t "${IMAGE_BASE}:${SHA_TAG}" \
+            "${IMAGE_BASE}:${SHA_TAG}-amd64" \
+            "${IMAGE_BASE}:${SHA_TAG}-arm64"
+
+          docker buildx imagetools create -t "${IMAGE_BASE}:nginx-latest" \
+            "${IMAGE_BASE}:${SHA_TAG}-amd64" \
+            "${IMAGE_BASE}:${SHA_TAG}-arm64"
+
+          {
+            echo "### nginx image built"
+            echo ""
+            echo "- \`${IMAGE_BASE}:${SHA_TAG}\`"
+            echo "- \`${IMAGE_BASE}:nginx-latest\`"
+            echo ""
+            echo "For reproducible rollouts, pin overlays to the SHA tag rather than \`nginx-latest\`."
+          } >> "$GITHUB_STEP_SUMMARY"

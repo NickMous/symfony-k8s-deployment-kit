@@ -1,0 +1,19 @@
+# Project-specific. Hostnames, IngressRoute kind, middlewares, TLS — all yours.
+# Example here uses Traefik IngressRoute; swap for standard Ingress / cert-manager / etc. as needed.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: app-https
+  labels:
+    app.kubernetes.io/component: ingress
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`example.com`) || Host(`www.example.com`)
+      kind: Rule
+      services:
+        - name: app
+          port: 80
+  tls:
+    secretName: app-tls

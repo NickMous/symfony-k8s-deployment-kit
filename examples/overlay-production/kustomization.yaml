@@ -1,0 +1,115 @@
+# Example: how a project consumes the template for its production environment.
+# Once this template is pushed to a git repo (e.g. github.com/chalet/symfony-k8s),
+# replace the local `../../` paths below with versioned git refs:
+#
+#   resources:
+#     - github.com/chalet/symfony-k8s//base?ref=v1.0.0
+#   components:
+#     - github.com/chalet/symfony-k8s//components/postgres?ref=v1.0.0
+#
+# The ?ref=vX.Y.Z pin is the key piece — each project bumps when it's ready.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: zcdb-production
+
+# Every resource (Deployment, Service, ConfigMap, Secret, PVC, …) gets this
+# prefix. References within the kustomization graph are rewritten automatically.
+namePrefix: zcdb-
+
+resources:
+  - ../../base
+  # Project-specific resources live here:
+  - ingress.yaml
+  - certificate.yaml
+  - middlewares.yaml
+  - hpa.yaml
+  # In a real project, replace this with your SOPS-encrypted secrets file.
+  - secrets.example.yaml
+
+# Opt into the optional pieces this project actually needs.
+# Skip any line to leave that service out.
+components:
+  - ../../components/postgres
+  - ../../components/redis
+  - ../../components/messenger
+  - ../../components/storage
+
+# Project-specific config values. Merged on top of base/configmap.yaml.
+configMapGenerator:
+  - name: app-config
+    behavior: merge
+    literals:
+      - TZ=Europe/Amsterdam
+      - DEFAULT_URI=https://zalencentrumdebrug.nl
+      - POSTGRES_DB=zcdb
+
+# Image references — these target the placeholder names used in base/components.
+# app-image:       the project's own Symfony PHP-FPM image (built per-project)
+# app-nginx-image: the shared nginx image built from this template repo;
+#                  pin to a SHA tag for reproducible rollouts.
+images:
+  - name: app-image
+    newName: ghcr.io/nickmous/zcdb
+    newTag: latest
+  - name: app-nginx-image
+    newName: ghcr.io/nickmous/symfony-k8s-deployment-kit
+    newTag: nginx-latest
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: zcdb
+      app.kubernetes.io/instance: production
+    includeSelectors: false
+
+patches:
+  # Bump replicas + resources for production.
+  - path: patches/deployment-patch.yaml
+  - path: patches/messenger-patch.yaml
+  # Add this project's bundle-specific warmup steps (icons, sitemaps).
+  - path: patches/cache-warmup-extras.yaml
+  # If using messenger + storage, mount storage into messenger too.
+  - path: patches/messenger-storage.yaml
+
+# Wire the (prefixed) Service names into the ConfigMap so APP_SERVICE_HOST,
+# POSTGRES_HOST, REDIS_HOST, DATABASE_HOST resolve to the real DNS names.
+# These run at the overlay level — after namePrefix — so they pick up the
+# `zcdb-` prefix correctly.
+# Skip entries for components you didn't enable above.
+replacements:
+  - source:
+      kind: Service
+      name: app
+      fieldPath: metadata.name
+    targets:
+      - select:
+          kind: ConfigMap
+          name: app-config
+        fieldPaths:
+          - data.APP_SERVICE_HOST
+  - source:
+      kind: Service
+      name: app-postgres
+      fieldPath: metadata.name
+    targets:
+      - select:
+          kind: ConfigMap
+          name: app-config
+        fieldPaths:
+          - data.POSTGRES_HOST
+          - data.DATABASE_HOST
+        options:
+          create: true
+  - source:
+      kind: Service
+      name: app-redis
+      fieldPath: metadata.name
+    targets:
+      - select:
+          kind: ConfigMap
+          name: app-config
+        fieldPaths:
+          - data.REDIS_HOST
+        options:
+          create: true

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  labels:
+    app.kubernetes.io/name: app
+    app.kubernetes.io/component: application
+data:
+  APP_ENV: prod
+  TZ: UTC
+  # Host fields below are filled in via kustomize replacements
+  # by the base + active components. Do not edit literal values here.
+  APP_SERVICE_HOST: ""

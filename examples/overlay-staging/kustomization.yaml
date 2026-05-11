@@ -1,0 +1,66 @@
+# Reference overlay for the staging environment. Per-branch staging
+# deployments are generated from generator/ — this overlay is mostly
+# documentation of what the generator produces.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: zcdb-staging
+namePrefix: zcdb-
+
+resources:
+  - ../../base
+  - ingress.yaml
+  - certificate.yaml
+  - middlewares.yaml
+  # In a real project, replace with your SOPS-encrypted secrets file.
+  - secrets.example.yaml
+
+components:
+  - ../../components/postgres
+  - ../../components/redis
+  - ../../components/messenger
+  - ../../components/storage
+
+configMapGenerator:
+  - name: app-config
+    behavior: merge
+    literals:
+      - TZ=Europe/Amsterdam
+      - DEFAULT_URI=https://staging.example.com
+      - POSTGRES_DB=zcdb
+      - MAILER_OVERRIDE_RECIPIENTS=dev@example.com
+
+images:
+  - name: app-image
+    newName: ghcr.io/nickmous/zcdb
+    newTag: staging-latest
+  - name: app-nginx-image
+    newName: ghcr.io/nickmous/symfony-k8s-deployment-kit
+    newTag: nginx-latest
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: zcdb
+      app.kubernetes.io/instance: staging
+    includeSelectors: false
+
+patches:
+  - path: patches/deployment-patch.yaml
+  - path: patches/configmap-patch.yaml
+
+replacements:
+  - source: { kind: Service, name: app, fieldPath: metadata.name }
+    targets:
+      - select: { kind: ConfigMap, name: app-config }
+        fieldPaths: [data.APP_SERVICE_HOST]
+  - source: { kind: Service, name: app-postgres, fieldPath: metadata.name }
+    targets:
+      - select: { kind: ConfigMap, name: app-config }
+        fieldPaths: [data.POSTGRES_HOST, data.DATABASE_HOST]
+        options: { create: true }
+  - source: { kind: Service, name: app-redis, fieldPath: metadata.name }
+    targets:
+      - select: { kind: ConfigMap, name: app-config }
+        fieldPaths: [data.REDIS_HOST]
+        options: { create: true }

@@ -1,0 +1,32 @@
+# Drop this into your project's .github/workflows/.
+# Bump the @ref to pick up template updates.
+
+name: Cleanup Staging Environments
+
+on:
+  delete:
+  workflow_dispatch:
+    inputs:
+      environment_name:
+        description: 'Branch / environment name to remove (will be sanitized)'
+        required: false
+        type: string
+
+jobs:
+  cleanup-deleted-branch:
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    uses: nickmous/symfony-k8s-deployment-kit/.github/workflows/cleanup-staging.yaml@v1.0.0
+    with:
+      app-name: myapp
+      fleet-repo: OWNER/fleet-infra
+      branch-name: ${{ github.event.ref }}
+    secrets: inherit
+
+  manual-cleanup:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment_name != ''
+    uses: nickmous/symfony-k8s-deployment-kit/.github/workflows/cleanup-staging.yaml@v1.0.0
+    with:
+      app-name: myapp
+      fleet-repo: OWNER/fleet-infra
+      branch-name: ${{ github.event.inputs.environment_name }}
+    secrets: inherit

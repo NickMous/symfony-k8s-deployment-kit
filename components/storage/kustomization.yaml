@@ -1,0 +1,48 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - storage-pvc.yaml
+
+# Mount the storage PVC into the app deployment (nginx, php-fpm, cache-warmup).
+# Strategic merge — patches by container/initContainer name, so it composes
+# with other components that add their own containers in any order.
+patches:
+  - target:
+      kind: Deployment
+      name: app
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: app
+      spec:
+        template:
+          spec:
+            volumes:
+              - name: storage
+                persistentVolumeClaim:
+                  claimName: app-storage
+            # Listing every initContainer by name pins the order — without
+            # this, kustomize's strategic-merge moves the patched item to the
+            # front and breaks startup ordering.
+            initContainers:
+              - name: wait-for-postgres
+              - name: copy-public-files
+              - name: run-migrations
+              - name: cache-warmup
+                volumeMounts:
+                  - name: storage
+                    mountPath: /app/storage
+            containers:
+              - name: nginx
+                volumeMounts:
+                  - name: storage
+                    mountPath: /app/storage
+              - name: php-fpm
+                volumeMounts:
+                  - name: storage
+                    mountPath: /app/storage
+
+# If you also use the messenger component and want storage available there,
+# add a similar patch in your overlay (see examples/overlay-production).

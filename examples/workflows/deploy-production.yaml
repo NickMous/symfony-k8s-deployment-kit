@@ -1,0 +1,27 @@
+# Drop this into your project's .github/workflows/.
+# Edit the `with:` values to match your app. The actual deploy logic lives
+# in symfony-k8s — bump the @ref to upgrade.
+
+name: Deploy to Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to build (e.g., v1.0.0)'
+        required: true
+        default: 'v0.0.0-manual'
+
+jobs:
+  deploy:
+    uses: nickmous/symfony-k8s-deployment-kit/.github/workflows/deploy-production.yaml@v1.0.0
+    with:
+      version: ${{ inputs.version || github.ref_name }}
+      prod-url: https://example.com
+      # Sentry release tracking — leave these blank to skip.
+      sentry-org: ''
+      sentry-project: ''
+      sentry-url: ''
+    secrets: inherit

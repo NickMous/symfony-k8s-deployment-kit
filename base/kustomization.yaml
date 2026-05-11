@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+
+configMapGenerator:
+  - name: app-nginx-config
+    files:
+      - default.conf=nginx-default.conf
+    options:
+      labels:
+        app.kubernetes.io/name: app
+        app.kubernetes.io/component: application
+
+# Note: hostname wiring (APP_SERVICE_HOST, POSTGRES_HOST, REDIS_HOST, DATABASE_HOST)
+# is done via `replacements` in the project's overlay — see examples/overlay-production
+# — because kustomize's built-in transformer order applies namePrefix AFTER
+# replacements declared at the base/component level. Doing it in the overlay
+# guarantees the replacement reads the final prefixed Service names.
+
+# Images set in overlays.

@@ -1,0 +1,31 @@
+# Drop this into your project's .github/workflows/.
+# Bump the @ref to pick up template updates.
+
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy (empty = current ref)'
+        required: false
+        type: string
+
+jobs:
+  deploy:
+    uses: nickmous/symfony-k8s-deployment-kit/.github/workflows/deploy-staging.yaml@v1.0.0
+    with:
+      app-name: myapp
+      fleet-repo: OWNER/fleet-infra
+      staging-domain-base: staging.example.com
+      # Comma-separated `staging.X` hosts that should be rewritten to
+      # `{slug}.staging.X` per branch.
+      staging-domains: 'staging.example.com'
+      branch: ${{ inputs.branch }}
+      sentry-org: ''
+      sentry-project: ''
+      sentry-url: ''
+    secrets: inherit
