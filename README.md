@@ -220,12 +220,29 @@ on:
 
 jobs:
   deploy:
+    # Reusable workflows can only RESTRICT caller permissions — never
+    # expand them. Declare the scopes the reusable workflow needs.
+    permissions:
+      contents: read
+      packages: write
     uses: nickmous/symfony-k8s-deployment-kit/.github/workflows/deploy-production.yaml@v1.0.0
     with:
-      version: ${{ inputs.version || github.ref_name }}
+      version: ${{ github.event.inputs.version || github.ref_name }}
       prod-url: https://example.com
     secrets: inherit
 ```
+
+**Two gotchas to know:**
+
+1. **Permissions cascade**: a reusable workflow inherits the caller's
+   `GITHUB_TOKEN` permissions and can only further restrict them. If the
+   caller doesn't grant `packages: write`, the reusable workflow can't
+   either — the run fails with `startup_failure` and no log output. Set
+   the needed permissions at the caller job level (see stubs).
+2. **`inputs` context**: only exists for `workflow_dispatch` /
+   `workflow_call` triggers. Referencing `${{ inputs.x }}` on a `push` or
+   `release` trigger fails workflow startup. Use
+   `${{ github.event.inputs.x || '' }}` instead — it's always defined.
 
 ### Reusable workflow inputs
 
