@@ -59,6 +59,12 @@ on:
 env:
   REGISTRY: ghcr.io
 
+# Dedupe rapid pushes to the same branch — only the latest commit per
+# (caller-repo, branch) wins. Avoids racing commits into the fleet repo.
+concurrency:
+  group: deploy-staging-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     name: Build and Deploy to Staging
