@@ -16,9 +16,15 @@ on:
 
 jobs:
   deploy:
+    # Reusable workflows can only RESTRICT caller permissions, never expand
+    # them. Declare what the reusable workflow needs here so it can request
+    # those scopes on its GITHUB_TOKEN.
+    permissions:
+      contents: read
+      packages: write
     uses: nickmous/symfony-k8s-deployment-kit/.github/workflows/deploy-production.yaml@v1.0.0
     with:
-      version: ${{ inputs.version || github.ref_name }}
+      version: ${{ github.event.inputs.version || github.ref_name }}
       prod-url: https://example.com
       # Sentry release tracking — leave these blank to skip.
       sentry-org: ''

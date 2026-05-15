@@ -16,6 +16,12 @@ on:
 
 jobs:
   deploy:
+    # Reusable workflows can only RESTRICT caller permissions, never expand
+    # them. Declare what the reusable workflow needs here so it can request
+    # those scopes on its GITHUB_TOKEN.
+    permissions:
+      contents: write
+      packages: write
     uses: nickmous/symfony-k8s-deployment-kit/.github/workflows/deploy-staging.yaml@v1.0.0
     with:
       app-name: myapp
@@ -24,7 +30,7 @@ jobs:
       # Comma-separated `staging.X` hosts that should be rewritten to
       # `{slug}.staging.X` per branch.
       staging-domains: 'staging.example.com'
-      branch: ${{ inputs.branch }}
+      branch: ${{ github.event.inputs.branch || '' }}
       sentry-org: ''
       sentry-project: ''
       sentry-url: ''
