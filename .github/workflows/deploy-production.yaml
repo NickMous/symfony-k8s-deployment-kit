@@ -121,6 +121,14 @@ jobs:
       packages: write
 
     steps:
+      # Needed by `sentry-cli releases set-commits --auto`, which reads the git
+      # history and remote from the working directory. fetch-depth: 0 so it can
+      # resolve the full commit range since the previous release.
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Prepare Docker image name
         id: docker
         env:
