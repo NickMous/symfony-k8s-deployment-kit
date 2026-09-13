@@ -96,7 +96,7 @@ jobs:
           else
             BRANCH_NAME="${REF#refs/heads/}"
           fi
-          BRANCH_SLUG=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | cut -c1-42 | sed 's/-$//')
+          BRANCH_SLUG=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | cut -c1-36 | sed 's/-$//')
           echo "name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
           echo "slug=$BRANCH_SLUG" >> "$GITHUB_OUTPUT"
 

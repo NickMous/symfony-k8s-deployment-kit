@@ -40,7 +40,7 @@ jobs:
         env:
           BRANCH_INPUT: ${{ inputs.branch-name }}
         run: |
-          BRANCH_SLUG=$(echo "$BRANCH_INPUT" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | cut -c1-42 | sed 's/-$//')
+          BRANCH_SLUG=$(echo "$BRANCH_INPUT" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | cut -c1-36 | sed 's/-$//')
           echo "name=$BRANCH_INPUT" >> "$GITHUB_OUTPUT"
           echo "slug=$BRANCH_SLUG" >> "$GITHUB_OUTPUT"
 
