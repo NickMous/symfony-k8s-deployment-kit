@@ -84,11 +84,10 @@ spec:
               mountPath: /app/var
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "50m"
+              memory: "64Mi"
+              cpu: "10m"
             limits:
-              memory: "256Mi"
-              cpu: "200m"
+              memory: "128Mi"
           livenessProbe:
             exec:
               command:
