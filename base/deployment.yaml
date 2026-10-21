@@ -125,11 +125,10 @@ spec:
               mountPath: /app/public
           resources:
             requests:
-              memory: "64Mi"
-              cpu: "50m"
+              memory: "16Mi"
+              cpu: "10m"
             limits:
-              memory: "128Mi"
-              cpu: "200m"
+              memory: "64Mi"
           livenessProbe:
             httpGet:
               path: /health
@@ -164,11 +163,10 @@ spec:
               mountPath: /app/public
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "100m"
+              memory: "64Mi"
+              cpu: "20m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "128Mi"
           livenessProbe:
             tcpSocket:
               port: 9000
