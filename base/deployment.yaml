@@ -125,7 +125,7 @@ spec:
               mountPath: /app/public
           resources:
             requests:
-              memory: "16Mi"
+              memory: "32Mi"
               cpu: "10m"
             limits:
               memory: "64Mi"
@@ -163,10 +163,10 @@ spec:
               mountPath: /app/public
           resources:
             requests:
-              memory: "64Mi"
+              memory: "96Mi"
               cpu: "20m"
             limits:
-              memory: "128Mi"
+              memory: "192Mi"
           livenessProbe:
             tcpSocket:
               port: 9000
