@@ -1,0 +1,40 @@
+# Copy to .github/workflows/imlostincode-docs.yaml in a docs repo (one with the
+# imlostincode-docs topic). It asks portfolio-websites to rebuild imlostincode
+# when the docs could have changed: a published release, or a push to the
+# default branch that touches what the site shows.
+#
+# Needs the IMLOSTINCODE_DISPATCH_TOKEN secret in the docs repo: a fine-grained
+# token limited to NickMous/portfolio-websites with Contents: read and write
+# (the permission repository_dispatch requires).
+
+name: Update imlostincode docs
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'examples/**'
+      - 'imlostincode.json'
+
+permissions: {}
+
+jobs:
+  dispatch:
+    # Drafts and pre-releases never become a docs version, so they need no rebuild.
+    if: github.event_name == 'push' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask portfolio-websites to rebuild imlostincode
+        env:
+          GH_TOKEN: ${{ secrets.IMLOSTINCODE_DISPATCH_TOKEN }}
+          REPO: ${{ github.event.repository.name }}
+          REF: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          gh api repos/NickMous/portfolio-websites/dispatches \
+            -f event_type=docs-updated \
+            -f "client_payload[repo]=$REPO" \
+            -f "client_payload[ref]=$REF"
