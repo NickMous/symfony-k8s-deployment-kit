@@ -1,0 +1,8 @@
+{
+  "kind": "Deployment kit",
+  "color": "green",
+  "oneLiner": {
+    "en": "The same idea for Symfony apps: one shared deploy setup instead of a copy in every project.",
+    "nl": "Hetzelfde idee voor Symfony-apps: één gedeelde deploy-setup in plaats van een kopie in elk project."
+  }
+}
