@@ -19,6 +19,7 @@ components/                 # kustomize: opt-in per project
   redis/                    # Redis Deployment + Service + PVC
   messenger/                # Symfony Messenger worker
   storage/                  # shared ReadWriteMany PVC
+  staging-volume-cleanup/   # per-branch staging only: delete StatefulSet volumes with the branch
 
 docker/
   nginx/Dockerfile          # the shared nginx + ngx_brotli image
@@ -198,6 +199,15 @@ Two ways the generated kustomization can find the base + components:
 
 The bundled `generator/kustomization.yaml.tmpl` shows both modes with one
 commented out.
+
+When a branch is deleted, `cleanup-staging.yaml` removes its folder from the
+fleet repo and Flux prunes its resources. Volumes created from a
+StatefulSet's `volumeClaimTemplates` (the Postgres data) are kept by default,
+so include the `staging-volume-cleanup` component in the generator. It sets
+`persistentVolumeClaimRetentionPolicy` so a pruned StatefulSet takes its
+volumes with it, while scaling to 0 still keeps them. Don't use it in
+production: there, deleting a StatefulSet (for example when renaming it)
+would delete the database.
 
 ## Project workflows
 
