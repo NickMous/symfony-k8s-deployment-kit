@@ -1,0 +1,19 @@
+# Deletes a StatefulSet's volumes when the StatefulSet itself is deleted.
+#
+# For per-branch staging only: when a branch is cleaned up, Flux prunes its
+# StatefulSets, but volumes created from volumeClaimTemplates are kept by
+# default and pile up. Don't use this in production, where deleting a
+# StatefulSet (for example when renaming it) would then delete its data.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+  - target:
+      kind: StatefulSet
+    patch: |-
+      - op: add
+        path: /spec/persistentVolumeClaimRetentionPolicy
+        value:
+          # Scaling to 0 (as in the Postgres upgrade guide) keeps the volume
+          whenScaled: Retain
+          whenDeleted: Delete
