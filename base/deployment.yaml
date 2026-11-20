@@ -22,7 +22,7 @@ spec:
       initContainers:
         # No-op when postgres isn't enabled (POSTGRES_HOST configmap key absent).
         - name: wait-for-postgres
-          image: postgres:16-alpine
+          image: postgres:18-alpine
           command:
             - sh
             - -c
