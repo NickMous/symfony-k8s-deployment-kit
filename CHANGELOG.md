@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 (2026-11-20)
+
+- New opt-in component `components/staging-volume-cleanup` for the per-branch
+  staging generator: when a branch is cleaned up, its StatefulSet volumes
+  (the Postgres data) are deleted with it instead of being left behind.
+  Scaling to 0 still keeps them. Don't use it in production.
+
 ## 0.2.1 (2026-11-20)
 
 Use this instead of 0.2.0.
