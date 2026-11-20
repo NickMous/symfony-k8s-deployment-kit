@@ -38,6 +38,10 @@ metadata:
     app.kubernetes.io/component: cache
 spec:
   replicas: 1
+  # The data volume is ReadWriteOnce: stop the old pod before starting the
+  # new one, or a new pod on another node waits forever to attach it.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: app-redis

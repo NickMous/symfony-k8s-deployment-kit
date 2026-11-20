@@ -290,3 +290,7 @@ each explicitly.
 Tag releases (`v1.0.0`, `v1.1.0`, …). Projects pin via `?ref=vX.Y.Z`.
 Breaking changes (renames, structural shifts) get a major bump; additive
 changes get a minor bump.
+
+Upgrade guides for breaking changes:
+
+- [Postgres 16 → 18 (v0.2.0)](docs/upgrading-to-postgres-18.md)
