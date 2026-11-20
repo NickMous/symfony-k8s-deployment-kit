@@ -40,8 +40,13 @@ spec:
   replicas: 1
   # The data volume is ReadWriteOnce: stop the old pod before starting the
   # new one, or a new pod on another node waits forever to attach it.
+  # (Same effect as `type: Recreate` with one replica, but unlike Recreate it
+  # applies cleanly over the defaulted strategy of existing Deployments.)
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: app-redis
@@ -52,6 +57,12 @@ spec:
         app.kubernetes.io/name: app-redis
         app.kubernetes.io/component: cache
     spec:
+      # Redis 8 only fixes data dir ownership when the dir holds nothing but
+      # Redis files, and a new volume always has lost+found. Give the redis
+      # group (gid 1000 in the image) write access to the volume instead.
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: redis
           image: redis:8-alpine
