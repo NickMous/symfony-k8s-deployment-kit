@@ -18,6 +18,7 @@ components/                 # kustomize: opt-in per project
   postgres/                 # Postgres StatefulSet + Service
   redis/                    # Redis Deployment + Service + PVC
   messenger/                # Symfony Messenger worker
+  scheduler/                # Symfony Scheduler (always one replica)
   storage/                  # shared ReadWriteMany PVC
   staging-volume-cleanup/   # per-branch staging only: delete StatefulSet volumes with the branch
 
@@ -42,7 +43,7 @@ examples/
 ## Naming convention
 
 Generic resource names — `app`, `app-postgres`, `app-redis`, `app-messenger`,
-`app-storage`, `app-config`, `app-secret`, `app-postgres-secret`,
+`app-scheduler`, `app-storage`, `app-config`, `app-secret`, `app-postgres-secret`,
 `app-branch-secret`. The project's overlay sets `namePrefix:` (e.g.
 `zcdb-`) and kustomize rewrites every in-graph reference.
 
@@ -164,6 +165,26 @@ configMapGenerator:
 
 Project-specific (domain names, TLS issuer, basic-auth allowlists). The
 template ships placeholders in the example overlays — copy and adapt.
+
+## Scheduler
+
+`components/scheduler` runs `messenger:consume scheduler_default` in its own
+Deployment, separate from the messenger worker:
+
+- It runs the app's [Symfony Scheduler](https://symfony.com/doc/current/scheduler.html)
+  schedule (`#[AsSchedule]`, `#[AsCronTask]`, `#[AsPeriodicTask]`). The app needs
+  `symfony/scheduler` and a default schedule; without one the pod fails with an
+  unknown transport.
+- It always has **one replica**. Every consumer of `scheduler_default` runs the
+  whole schedule, so a second replica, or adding `scheduler_default` to the
+  messenger worker, runs each task twice.
+- Deploys stop the old pod before starting the new one (`maxSurge: 0`), so the
+  schedule never runs in two pods at once.
+- Tasks that work with files need the storage volume. Mount it the same way as
+  for the messenger (see `examples/overlay-production/patches/scheduler-storage.yaml`).
+
+Make the schedule `stateful()` (the Flex recipe does this) so a run missed
+during a deploy or outage still happens afterwards.
 
 ## Init container ordering
 

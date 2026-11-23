@@ -29,6 +29,7 @@ namePrefix: ${BRANCH_SLUG}-zcdb-
 #   - github.com/nickmous/symfony-k8s-deployment-kit//components/postgres?ref=v1.0.0
 #   - github.com/nickmous/symfony-k8s-deployment-kit//components/redis?ref=v1.0.0
 #   - github.com/nickmous/symfony-k8s-deployment-kit//components/messenger?ref=v1.0.0
+#   - github.com/nickmous/symfony-k8s-deployment-kit//components/scheduler?ref=v1.0.0
 #   - github.com/nickmous/symfony-k8s-deployment-kit//components/storage?ref=v1.0.0
 #   # Delete a branch's Postgres volume when its StatefulSet is pruned (staging only)
 #   - github.com/nickmous/symfony-k8s-deployment-kit//components/staging-volume-cleanup?ref=v1.0.0
@@ -45,6 +46,7 @@ components:
   - ../../base/components/postgres
   - ../../base/components/redis
   - ../../base/components/messenger
+  - ../../base/components/scheduler
   - ../../base/components/storage
   # Delete a branch's Postgres volume when its StatefulSet is pruned (staging
   # only). Listed last so it sees the StatefulSets from the components above.

@@ -1,0 +1,117 @@
+# Symfony Scheduler: consumes the scheduler_default transport, which runs the
+# app's #[AsSchedule] schedule(s) (recurring messages, #[AsCronTask] and
+# #[AsPeriodicTask]). Requires symfony/scheduler and a default schedule in the
+# app; without it this pod fails with an unknown transport.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-scheduler
+  labels:
+    app.kubernetes.io/name: app-scheduler
+    app.kubernetes.io/component: scheduler
+spec:
+  # Exactly one: every consumer of scheduler_default runs the whole schedule,
+  # so more replicas would run each task more than once. Don't scale this up.
+  replicas: 1
+  # The old pod stops before the new one starts, so a deploy never runs the
+  # schedule twice at the same time. (Not Recreate: that can't be applied to a
+  # Deployment that already has the defaulted rollingUpdate fields.)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app-scheduler
+      app.kubernetes.io/component: scheduler
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-scheduler
+        app.kubernetes.io/component: scheduler
+    spec:
+      imagePullSecrets:
+        - name: image-pull-secret
+      initContainers:
+        - name: wait-for-app
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              until wget -q --spider "http://${APP_SERVICE_HOST}/health" 2>/dev/null; do
+                echo "Waiting for main application..."
+                sleep 5
+              done
+              echo "Main application is ready!"
+          env:
+            - name: APP_SERVICE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: APP_SERVICE_HOST
+
+        - name: cache-warmup
+          image: app-image
+          workingDir: /app
+          command:
+            - sh
+            - -c
+            - |
+              php bin/console cache:clear --no-warmup
+              php bin/console cache:warmup
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-branch-secret
+                optional: true
+            - secretRef:
+                name: app-secret
+          volumeMounts:
+            - name: app-var
+              mountPath: /app/var
+
+      containers:
+        - name: scheduler
+          image: app-image
+          workingDir: /app
+          command:
+            - php
+            - bin/console
+            - messenger:consume
+            - scheduler_default
+            - --time-limit=3600
+            - --memory-limit=256M
+            - -vv
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-branch-secret
+                optional: true
+            - secretRef:
+                name: app-secret
+          volumeMounts:
+            - name: app-var
+              mountPath: /app/var
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "10m"
+            limits:
+              memory: "128Mi"
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - ps aux | grep 'messenger:consume' | grep -v grep
+            initialDelaySeconds: 60
+            periodSeconds: 30
+
+      volumes:
+        - name: app-var
+          emptyDir: {}
+      restartPolicy: Always
