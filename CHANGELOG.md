@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 (2026-11-23)
+
+- New opt-in component `components/scheduler`: a Deployment that runs
+  `messenger:consume scheduler_default` for Symfony Scheduler. It always has
+  one replica and stops the old pod before starting the new one, so scheduled
+  tasks never run twice; keep `scheduler_default` out of the messenger worker.
+  It's otherwise the same as the messenger worker (init containers, env,
+  resources). Mount the storage volume when tasks work with files; see the
+  README and `examples/overlay-production/patches/scheduler-storage.yaml`.
+
 ## 0.2.2 (2026-11-20)
 
 - New opt-in component `components/staging-volume-cleanup` for the per-branch
