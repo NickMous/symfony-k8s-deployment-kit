@@ -1,0 +1,19 @@
+# Mount the shared storage PVC into the scheduler.
+# Only needed when both the storage and scheduler components are enabled and
+# scheduled tasks work with stored files.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-scheduler
+spec:
+  template:
+    spec:
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: app-storage
+      containers:
+        - name: scheduler
+          volumeMounts:
+            - name: storage
+              mountPath: /app/storage

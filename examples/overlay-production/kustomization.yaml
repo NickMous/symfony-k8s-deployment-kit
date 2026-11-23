@@ -34,6 +34,7 @@ components:
   - ../../components/postgres
   - ../../components/redis
   - ../../components/messenger
+  - ../../components/scheduler
   - ../../components/storage
 
 # Project-specific config values. Merged on top of base/configmap.yaml.
@@ -71,6 +72,8 @@ patches:
   - path: patches/cache-warmup-extras.yaml
   # If using messenger + storage, mount storage into messenger too.
   - path: patches/messenger-storage.yaml
+  # Same for the scheduler, when its tasks work with stored files.
+  - path: patches/scheduler-storage.yaml
 
 # Wire the (prefixed) Service names into the ConfigMap so APP_SERVICE_HOST,
 # POSTGRES_HOST, REDIS_HOST, DATABASE_HOST resolve to the real DNS names.
